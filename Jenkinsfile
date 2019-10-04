@@ -19,13 +19,14 @@ pipeline {
         DEPLOY_URL = ''
         GROUP_NAME = 'group1'
         GROUP_PORT = '5001'
-        PROJECT_NAME = 'edd-oct-flask-devops'
+        PROJECT_NAME = 'flask-testing'
         PACKAGE_NAME = 'apis'
         LOCAL_BRANCH_NAME = ''
         CURRENT_GIT_COMMIT = ''
         CONTAINER_NAME = ''
         CURRENT_IMAGE_NAME = ''
         PREVIOUS_IMAGE_NAME = ''
+        MAIL_LIST = "frovirat.ficosa@gmail.com"
     }
     stages {
         stage('Info') {
@@ -33,6 +34,7 @@ pipeline {
                 echo 'Starting'
                 script {
                     def scmVars = checkout scm
+                    setBuildStatus("Build running...", 'PENDING');
                     LOCAL_BRANCH_NAME = scmVars.GIT_BRANCH
                     CURRENT_GIT_COMMIT = scmVars.GIT_COMMIT
                     DEPLOY_URL = BUILD_URL.split('/')[2].split(':')[0]
@@ -54,37 +56,53 @@ pipeline {
         }
 
         stage('Linter') {
-			agent{
-				docker{
-					image 'pylint:latest'
-					}
-					}
+            agent {
+                docker {
+                    image 'pylint:latest'
+                }
+            }
             steps {
                 echo 'Linting...'
-				sh 'pip install -r requirements.txt'  
-				sh 'pylint -f parseable --rcfile=.pylintrc $PACKAGE_NAME | tee pylint.out'
-								recordIssues(
-							enabledForFailure: true,
-							ignoreFailedBuilds: false,
-							tools: [ pylint(pattern: 'pylint.out')],
-							qualityGates : [[threshold: 16, type: 'TOTAL_LOW', unstable: true],
-											[threshold: 11, type: 'TOTAL_NORMAL', unstable: true],
-											[threshold: 1, type: 'TOTAL_HIGH', unstable: true],
-											[threshold: 1, type: 'TOTAL_ERROR', unstable: true],
-							]
-				)
+                sh "pip install -r requirements.txt"
+                sh "pylint -f parseable --rcfile=.pylintrc $PACKAGE_NAME | tee pylint.out"
+                recordIssues(
+                    enabledForFailure: true,
+                    ignoreFailedBuilds: false,
+                    tools: [ pyLint(pattern: 'pylint.out') ],
+                    qualityGates: [
+                        [threshold: 16, type: 'TOTAL_LOW', unstable: true],
+                        [threshold: 11, type: 'TOTAL_NORMAL', unstable: true],
+                        [threshold: 1, type: 'TOTAL_HIGH', unstable: true],
+                        [threshold: 1, type: 'TOTAL_ERROR', unstable: true]
+                    ]
+                )
             }
         }
         stage('Test') {
-		    agent{
-			   docker{
-			       image 'pytest-cov:latest'         }
-				   
-				   }
-				 
+            agent {
+                docker {
+                    image 'pytest-cov:latest'
+                }
+            }
             steps {
                 echo 'Testing...'
-				sh 'py.test --cov -v --junitxml=unittests.xml --cov=$PACKAGE_NAME --cov=.coveragerc --cov-report=xml:coverage.xml'
+                sh "pip install -r requirements.txt"
+                sh "py.test --cov -v --junitxml=unittests.xml --cov=$PACKAGE_NAME --cov-config=.coveragerc --cov-report=xml:coverage.xml"
+                cobertura(
+                    autoUpdateHealth: false,
+                    autoUpdateStability: false,
+                    coberturaReportFile: '**/coverage.xml',
+                    failUnhealthy: false,
+                    failUnstable: false,
+                    maxNumberOfBuilds: 10,
+                    onlyStable: true,
+                    sourceEncoding: 'ASCII',
+                    zoomCoverageChart: false,
+                    lineCoverageTargets: '80, 80, 80',
+                    conditionalCoverageTargets: '80, 80, 80',
+                    classCoverageTargets: '80, 80, 80',
+                    fileCoverageTargets: '80, 80, 80',
+                )
             }
         }
         stage('Build') {
@@ -116,6 +134,7 @@ pipeline {
         }
         always {
             sh "echo POST-ACTION always"
+            setBuildStatus("Build results is ${currentBuild.result}", currentBuild.result);
         }
     }
 }
