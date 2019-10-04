@@ -65,7 +65,7 @@ pipeline {
 				sh 'pylint -f parseable --rcfile=.pylintrc $PACKAGE_NAME | tee pylint.out'
 								recordIssues(
 							enabledForFailure: true,
-							ignoreFailedBuild: false,
+							ignoreFailedBuilds: false,
 							tools: [ pylint(pattern: 'pylint.out')],
 							qualityGates : [[threshold: 16, type: 'TOTAL_LOW', unstable: true],
 											[threshold: 11, type: 'TOTAL_NORMAL', unstable: true],
