@@ -61,8 +61,9 @@ pipeline {
 					}
             steps {
                 echo 'Linting...'
+				sh 'pip install -r requirements.txt'
 				sh 'pylint -f parseable --rcfile=.pylintrc $PACKAGE_NAME | tee pylint.out'
-				recordIssues(
+								recordIssues(
 							enableForFailure: true,
 							ignoreFailedBuild: false,
 							tools: [ pylint(pattern: 'pylint.out')],
