@@ -61,7 +61,7 @@ pipeline {
 					}
             steps {
                 echo 'Linting...'
-				sh 'pip install -r requirements.txt'
+				sh 'pip install -r requirements.txt'  
 				sh 'pylint -f parseable --rcfile=.pylintrc $PACKAGE_NAME | tee pylint.out'
 								recordIssues(
 							enableForFailure: true,
@@ -76,8 +76,15 @@ pipeline {
             }
         }
         stage('Test') {
+		    agent{
+			   docker{
+			       image 'pytest-cov:latest         }
+				   
+				   }
+				 
             steps {
                 echo 'Testing...'
+				sh 'py.test --cov -v --junitxml=unittests.xml --cov=$PACKAGE_NAME --cov=.coveragerc --cov-report=xml:coverage.xml'
             }
         }
         stage('Build') {
