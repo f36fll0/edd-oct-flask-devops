@@ -78,7 +78,7 @@ pipeline {
         stage('Test') {
 		    agent{
 			   docker{
-			       image 'pytest-cov:latest         }
+			       image 'pytest-cov:latest'         }
 				   
 				   }
 				 
